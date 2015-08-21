@@ -1,5 +1,6 @@
 // ====== Gradle Build Script for wallee-applications ======
 
+
 // ------ Plugins ------
 
 buildscript {
@@ -27,16 +28,15 @@ buildscript {
         password props['password']
       }
     }
-
-	maven {
-		url "http://dl.bintray.com/jtwig/maven/"
-	}
-
   }
 
   dependencies {
     classpath 'io.wallee:buildtools:0.3.+'
   }
+}
+
+plugins {
+	id "ca.coglinc.javacc" version "2.3.1"
 }
 
 
