@@ -44,7 +44,7 @@ options {
 }
 
 PARSER_BEGIN(ParserCSS21)
-package com.helger.css.parser.generated;
+package com.helger.css.parser;
 
 public class ParserCSS21 extends com.helger.css.parser.AbstractParserCSS
 {

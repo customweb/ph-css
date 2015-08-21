@@ -61,20 +61,60 @@ apply plugin: 'io.wallee.single-java-project'
 dependencies {
     compile "com.helger:ph-commons:6.1.1"
     
+	testCompile 'junit:junit:4.11'
     testRuntime "ch.qos.logback:logback-classic:1.1.2"
 }
 
-// ---- Custom Tasks ----
+// ---- JavaCC Tasks and Configuration ----
 
+// JavaCC configuration:
+compileJavacc {
+	arguments = [ USER_CHAR_STREAM: 'true' ]
+}
+
+// Remove the dependencies added by JavaCC plugin to 'compileJava':
+gradle.projectsEvaluated {
+	def t = tasks['compileJava']
+	// println 'compileJava.dependsOn: ' + t.dependsOn
+	t.dependsOn = t.dependsOn.findAll { !(it instanceof Task && (it.name == 'compileJjtree' || it.name == 'compileJavacc')) }
+}
+
+// JavaCC task which compiles JavaCC/JJTree to Java sources and copies these into 'src/main/javacc':
 task javacc (type: Copy) {
 	group = 'JavaCC'
 	description = "(Re)generates Java code from JavaCC and JJTree sources and puts the generated code into the 'main' sources."
-	dependsOn 'compileJjtree', 'compileJavacc'
+	dependsOn 'compileJjtree', 'compileJavacc', 'javacc_cleanTargetDir'
+	
+	ext.targetDir = file('src/main/javacc')
+	
 	from tasks['compileJavacc'].outputDirectory
 	from tasks['compileJjtree'].outputDirectory
 	include '*.java'
-	into 'src/main/java/com/helger/css/parser/generated'
+	into "${targetDir}/com/helger/css/parser"
 }
+
+// Clean generated sources:
+task javacc_cleanTargetDir (type: Delete) {
+	def d = tasks['javacc'].targetDir
+	if (d.isDirectory()) {
+		delete d.listFiles()
+	}
+}
+
+// Add the generated sources to the 'main' source set:
+sourceSets.main.java.srcDir javacc.targetDir
+
+// Disable warnings for generated sources:
+eclipse.classpath.file.withXml { p ->
+	// TODO: This would be worth to be put into the 'buildtools' somehow!
+	p.asNode().children().findAll { it.name() == "classpathentry" && it.@kind == "src" && it.@path == "src/main/javacc" }.each { cpe ->
+		cpe.appendNode('attributes').appendNode('attributes', [ name: 'ignore_optional_problems', value: 'true' ])
+	}
+}
+
+
+
+// ---- Misc. Custom Tasks ----
 
 task buildAll {
 	group = 'Build'
@@ -99,20 +139,6 @@ task dependencyCheck (type: OwaspDependencyCheckTask) {
 		}
 	}
 }
-
-// ---- Custom Configuration for JavaCC ----
-
-compileJavacc {
-	arguments = [ USER_CHAR_STREAM: 'true' ]
-}
-
-// Remove the dependencies added by JavaCC plugin to 'compileJava':
-gradle.projectsEvaluated {
-	def t = tasks['compileJava']
-	println 'compileJava.dependsOn: ' + t.dependsOn
-	t.dependsOn = t.dependsOn.findAll { !(it instanceof Task && (it.name == 'compileJjtree' || it.name == 'compileJavacc')) }
-}
-
 
 
 // ---- Imports ----
