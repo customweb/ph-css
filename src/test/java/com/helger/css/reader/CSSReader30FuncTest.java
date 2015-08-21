@@ -54,9 +54,9 @@ import com.helger.css.writer.CSSWriterSettings;
 public final class CSSReader30FuncTest extends AbstractFuncTestCSSReader
 {
   @Parameters (name = "{index}: browserCompliant={0}")
-  public static List <Object> data ()
+  public static List <Object[]> data ()
   {
-    return Arrays.asList (new Object [] { true, false });
+    return Arrays.asList (new Object[][] { new Object[] { true }, new Object[] { false } });
   }
 
   public CSSReader30FuncTest (final boolean bBrowserCompliant)
