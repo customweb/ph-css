@@ -36,13 +36,14 @@ buildscript {
   
   configurations.all {
     resolutionStrategy {
-	  // enforce the JavaCC version to match the expectations of the project
+	  // Enforce the JavaCC version to match the expectations of the project:
       force group: 'net.java.dev.javacc', name: 'javacc', version: '6.1.2'
     }
   }
 }
 
 plugins {
+	// JavaCC plugin (see https://github.com/johnmartel/javaccPlugin):
 	id "ca.coglinc.javacc" version "2.3.1"
 }
 
@@ -56,6 +57,7 @@ defaultTasks 'buildAll'
 
 apply plugin: 'io.wallee.single-java-project'
 
+
 // ---- Dependencies ----
 
 dependencies {
@@ -64,6 +66,7 @@ dependencies {
 	testCompile 'junit:junit:4.11'
     testRuntime "ch.qos.logback:logback-classic:1.1.2"
 }
+
 
 // ---- JavaCC Tasks and Configuration ----
 
@@ -116,7 +119,6 @@ eclipse.classpath.file.withXml { p ->
 		cpe.appendNode('attributes').appendNode('attributes', [ name: 'ignore_optional_problems', value: 'true' ])
 	}
 }
-
 
 
 // ---- Misc. Custom Tasks ----
