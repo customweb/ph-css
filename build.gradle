@@ -1,0 +1,407 @@
+// ====== Gradle Build Script for wallee-applications ======
+
+// ------ Plugins ------
+
+buildscript {
+  repositories {
+    // TODO: Solve the chicken-and-egg problem with using the artifactory repo to download
+    // the buildtools and configuring the artifactory repo by applying the buildtools plugins!
+    def f = project.file("${System.getProperty('user.home')}/.gradle/cw-repo-password.properties")
+    def p = f.toPath()
+    assert Files.isReadable(p) : "Customweb repo password file does not exist or is not readable by the current user '${System.getProperty('user.name')}': '${p}'"
+    def perms = PosixFilePermissions.toString(Files.getPosixFilePermissions(p))
+    assert perms.endsWith('------') : "Customweb repo password file '${f}' is accessible by group and/or others (permissions '${perms}'); please make sure that the file is neither readable nor writable nor executable by anyone else than the current user '${System.getProperty('user.name')}'!"
+    def props = new Properties()
+    try {
+      f.withInputStream { props.load(it) }
+    } catch(Exception exc) {
+      throw new IOException("Failed to read Customweb repo password file '${p}': ${exc}", exc)
+    }
+    assert props['user'] != null && !props['user'].isEmpty() : "Missing or empty property 'user' in Customweb repo password file '${f}'."
+    assert props['password'] != null && !props['password'].isEmpty() : "Missing or empty property 'password' in Customweb repo password file '${f}'."
+
+    maven {
+      url 'https://repo.customweb.com/artifactory/repo'
+      credentials {
+        username props['user']
+        password props['password']
+      }
+    }
+
+	maven {
+		url "http://dl.bintray.com/jtwig/maven/"
+	}
+
+  }
+
+  dependencies {
+    classpath 'io.wallee:buildtools:0.3.+'
+  }
+}
+
+
+// ------ Basic Configuration ------
+
+group = 'io.wallee'
+ext.buildVersion = '1.0'
+ext.javaVersion = '1.8'
+defaultTasks 'buildAll'
+
+apply plugin: 'io.wallee.root-project'
+
+
+// ------ Dependency Management ------
+
+allprojects {
+  project.version = rootProject.version // FIXME: This should go into 'buildtools'!
+
+  afterEvaluate { project ->
+      // We log to logback using the slf4j API; for code using commons-logging (resp. java.util.logging)
+      // we include the jcl-over-slf4j (resp. jul-to-slf4j) modules which will route logging entries through
+      // these API through slf4j to logback. Since jcl-over-slf4j is a complete replacement of the commons-logging
+      // API and implementation, we need to exclude the orginal commons-logging classes from all configurations
+      // in all projects:
+      project.configurations*.exclude group: 'commons-logging'
+
+	  // Cal10N is used by the LocLogger in slf4j-ext, but the latest Cal10N version 0.8.1 contains an
+	  // annotation processor which does not (yet) support Java 8. This leads to warning while building
+	  // the Wallee project. Since we don't actually use the LocLogger (or any Cal10N classes directly)
+	  // we exclude the library from our dependencies:
+	  project.configurations*.exclude group: 'ch.qos.cal10n'
+
+	  // Some archaic projects like to pull in the 'xml-apis' as a transient dependency, though
+	  // these are part of the standard Java library since about Java 1.5; we never want these:
+	  project.configurations*.exclude group: 'xml-apis', module: 'xml-apis'
+  }
+}
+
+// -- Custom properties for important dependency version numbers used in different places:
+
+ext.depv = new TreeMap()
+
+depv.springFramework = '4.2.0.RELEASE'
+depv.aspectj = '1.7.4'
+depv.hibernateEntitymanager = '4.3.11.Final'
+depv.hibernateValidator = '5.2.1.Final'
+depv.jackson = '2.5.1'
+
+depv.i18n = '1.0.+'
+depv.pdfdiff = '1.0.+'
+depv.jtwigAddons = '1.1.+'
+depv.jtwig = '4.0.0-beta-20150305223257'
+
+depv.flyingsaucer = '9.0.7'
+depv.pdfbox = '0.7.3'
+depv.xmlgraphics = '1.7'
+depv.apacheemail = '1.3.3'
+depv.greenmail = '1.4.1'
+depv.jersey = '1.18.1'
+
+depv.jetty = '9.2.4.v20141103'
+
+depv.aws = '1.9.33'
+
+depv.slf4j = '1.7.10'
+
+depv.bouncycastle = '1.52'
+
+depv.mockito = '1.10.19'
+
+// We need to use this older version of ES to prevent a class instrumentation issue with searchguard.
+depv.elasticsearch = '1.5.1'
+depv.esSearchGuard = '0.5'
+depv.esAWS = '2.5.1'
+
+// -- Configured dependencies:
+
+ext.deps = new TreeMap()
+
+deps.hikari = 'com.zaxxer:HikariCP-java6:2.0.1'
+deps.jsr250api = 'javax.annotation:jsr250-api:1.0'
+deps.servletApi = "javax.servlet:javax.servlet-api:3.0.1"
+deps.guava = "com.google.guava:guava:17.0"
+deps.commonsIo = "commons-io:commons-io:2.4"
+deps.commonsFileUpload = "commons-fileupload:commons-fileupload:1.3.1"
+deps.commonsCodec = "commons-codec:commons-codec:1.10"
+deps.commonsBeanutils = "commons-beanutils:commons-beanutils:1.9.2"
+deps.commonsLang = "org.apache.commons:commons-lang3:3.4"
+deps.jgettext = "org.fedorahosted.tennera:jgettext:0.13"
+deps.mvel = "org.mvel:mvel2:2.1.3.Final"
+deps.rhino = "org.mozilla:rhino:1.7R4"
+deps.junit = "junit:junit:4.11"
+deps.logback = "ch.qos.logback:logback-classic:1.1.2"
+deps.parboiled = "com.github.parboiled1:grappa:1.0.0-beta.9"
+deps.reflections = "org.reflections:reflections:0.9.9"
+
+deps.hsqldb = "org.hsqldb:hsqldb:2.3.2"
+deps.easymock = "org.easymock:easymock:3.2"
+deps.postgres = "org.postgresql:postgresql:9.3-1102-jdbc41"
+
+deps.jacksonCore = "com.fasterxml.jackson.core:jackson-core:${depv.jackson}"
+deps.jacksonDatabind = "com.fasterxml.jackson.core:jackson-databind:${depv.jackson}"
+
+deps.springSwagger = "io.springfox:springfox-swagger2:2.2.2";
+deps.springSwaggerStatic = "io.springfox:springfox-staticdocs:2.2.2"
+
+deps.asciiDoc = "org.asciidoctor:asciidoctorj:1.5.2"
+deps.woodstox = "com.fasterxml.woodstox:woodstox-core:5.0.1"
+
+deps.aspectjRt    = "org.aspectj:aspectjrt:${depv.aspectj}"
+deps.aspectjTools = "org.aspectj:aspectjtools:${depv.aspectj}"
+
+deps.hibernateEntitymanager = "org.hibernate:hibernate-entitymanager:${depv.hibernateEntitymanager}"
+deps.hibernateValidator     = "org.hibernate:hibernate-validator:${depv.hibernateValidator}"
+deps.javaxEl = "javax.el:javax.el-api:2.2.5"
+
+deps.javaxCache = "javax.cache:cache-api:1.0.0"
+deps.infinispan = "org.infinispan:infinispan-jcache:7.0.3.Final"
+
+deps.elasticsearch = "org.elasticsearch:elasticsearch:${depv.elasticsearch}"
+deps.esSearchGuard = "com.floragunn:search-guard:${depv.esSearchGuard}"
+deps.esAWS = "org.elasticsearch:elasticsearch-cloud-aws:${depv.esAWS}"
+
+//  FIXME: Should resolve Maven BOM "org.springframework:spring-framework-bom:4.1.0.RELEASE"!
+// (See printBom task and helper methods below!)
+// Reference: https://repo1.maven.org/maven2/org/springframework/spring-framework-bom/4.1.0.RELEASE/spring-framework-bom-4.1.0.RELEASE.pom
+deps.springAop              = "org.springframework:spring-aop:${depv.springFramework}"
+deps.springAspects          = "org.springframework:spring-aspects:${depv.springFramework}"
+deps.springBeans            = "org.springframework:spring-beans:${depv.springFramework}"
+deps.springContext          = "org.springframework:spring-context:${depv.springFramework}"
+deps.springContextSupport   = "org.springframework:spring-context-support:${depv.springFramework}"
+deps.springCore             = "org.springframework:spring-core:${depv.springFramework}"
+deps.springExpression       = "org.springframework:spring-expression:${depv.springFramework}"
+deps.springInstrument       = "org.springframework:spring-instrument:${depv.springFramework}"
+deps.springInstrumentTomcat = "org.springframework:spring-instrument-tomcat:${depv.springFramework}"
+deps.springJdbc             = "org.springframework:spring-jdbc:${depv.springFramework}"
+deps.springOrm              = "org.springframework:spring-orm:${depv.springFramework}"
+deps.springOxm              = "org.springframework:spring-oxm:${depv.springFramework}"
+deps.springTest             = "org.springframework:spring-test:${depv.springFramework}"
+deps.springTx               = "org.springframework:spring-tx:${depv.springFramework}"
+deps.springWeb              = "org.springframework:spring-web:${depv.springFramework}"
+deps.springWebmvc           = "org.springframework:spring-webmvc:${depv.springFramework}"
+deps.springWebmvcPortlet    = "org.springframework:spring-webmvc-portlet:${depv.springFramework}"
+deps.springWebsocket        = "org.springframework:spring-websocket:${depv.springFramework}"
+deps.springMail             = "org.springframework.integration:spring-integration-mail:4.1.6.RELEASE"
+deps.springContextSupport   = "org.springframework:spring-context-support:${depv.springFramework}"
+
+deps.jettyServer		= "org.eclipse.jetty:jetty-server:${depv.jetty}"
+deps.jettyServlet		= "org.eclipse.jetty:jetty-servlet:${depv.jetty}"
+deps.jettyWebapp		= "org.eclipse.jetty:jetty-webapp:${depv.jetty}"
+deps.jettyServlets		= "org.eclipse.jetty:jetty-servlets:${depv.jetty}"
+deps.jettyAnnotations	= "org.eclipse.jetty:jetty-annotations:${depv.jetty}"
+
+deps.asm = "org.ow2.asm:asm:5.0.3"
+deps.asmCommons = "org.ow2.asm:asm-commons:5.0.3"
+
+deps.dbunit = "org.dbunit:dbunit:2.5.0@jar" // TODO: Why '@jar'!?
+deps.springTestDbunit = "com.github.springtestdbunit:spring-test-dbunit:1.1.0"
+
+
+deps.jtwigForm = "com.customweb:jtwig-form:${depv.jtwigAddons}"
+deps.jtwigDataGrid = "com.customweb:jtwig-data-grid:${depv.jtwigAddons}"
+
+
+deps.jtwigCore = "org.jtwig:jtwig-core:4.0-150819175035"
+deps.jtwigFunctions = "org.jtwig:jtwig-functions:4.0-150819175055"
+deps.jtwigSpring = "org.jtwig:jtwig-spring:${depv.jtwig}"
+
+deps.flyingsaucer = "org.xhtmlrenderer:flying-saucer-pdf:${depv.flyingsaucer}"
+deps.pdfbox = "org.pdfbox:com.springsource.org.pdfbox:${depv.pdfbox}"
+deps.xmlgraphicsBatikParser = "org.apache.xmlgraphics:batik-parser:${depv.xmlgraphics}"
+deps.xmlgraphicsBatikRasterizer = "org.apache.xmlgraphics:batik-rasterizer:${depv.xmlgraphics}"
+deps.xmlgraphicsBatikCodec = "org.apache.xmlgraphics:batik-codec:${depv.xmlgraphics}"
+
+deps.pdfdiff = "io.wallee:pdfdiff:${depv.pdfdiff}"
+
+deps.apacheemail = "org.apache.commons:commons-email:${depv.apacheemail}"
+deps.greenmail = "com.icegreen:greenmail:${depv.greenmail}"
+
+deps.jerseyClient = "com.sun.jersey:jersey-client:${depv.jersey}"
+deps.jerseyCore = "com.sun.jersey:jersey-core:${depv.jersey}"
+deps.jerseyMultipart = "com.sun.jersey.contribs:jersey-multipart:${depv.jersey}"
+
+deps.libI18n = "io.wallee:lib-i18n:${depv.i18n}"
+
+deps.jsoup = "org.jsoup:jsoup:1.8.1"
+
+deps.flyway = "org.flywaydb:flyway-sbt:3.1"
+
+deps.slf4jApi = "org.slf4j:slf4j-api:${depv.slf4j}"
+deps.slf4jExt = "org.slf4j:slf4j-ext:${depv.slf4j}"
+deps.slf4jJulToSlf4j = "org.slf4j:jul-to-slf4j:${depv.slf4j}"
+deps.slf4jJclOverSlf4j = "org.slf4j:jcl-over-slf4j:${depv.slf4j}"
+
+deps.logback = "ch.qos.logback:logback-classic:1.1.2"
+
+deps.awsSES = "com.amazonaws:aws-java-sdk-ses:${depv.aws}"
+deps.awsS3 = "com.amazonaws:aws-java-sdk-s3:${depv.aws}"
+deps.awsCore = "com.amazonaws:aws-java-sdk-core:${depv.aws}"
+deps.awsEC2 = "com.amazonaws:aws-java-sdk-ec2:${depv.aws}"
+
+deps.amazonAws = "com.amazonaws:aws-java-sdk-kms:1.9.21"
+
+deps.bytecodeOpencsv = "net.sf.opencsv:opencsv:2.3"
+
+deps.maxmindGeoIp = "com.maxmind.geoip2:geoip2:2.3.0"
+
+deps.yuiCompressor = "com.yahoo.platform.yui:yuicompressor:2.4.8"
+deps.less4j = "com.github.sommeri:less4j:1.12.0"
+
+deps.htmlSanitizer = 'com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20150501.1'
+deps.cssParser = 'com.helger:ph-css:4.0.0'
+deps.jerseyApacheClient = 'com.sun.jersey.contribs:jersey-apache-client4:1.18.4'
+
+
+
+// Note: To activate the debugging variant of Bouncycastle, set the 'debug_bouncycastle' property to true,
+//       either on the command line or in a 'gradle.properties' file next to this 'build.gradle' file.
+def bcprovVariant = hasProperty('debug_bouncycastle') && getProperty('debug_bouncycastle').equalsIgnoreCase('true') ? 'bcprov-debug-jdk15on' : 'bcprov-jdk15on'
+deps.bcprov = "org.bouncycastle:${bcprovVariant}:${depv.bouncycastle}"
+
+deps.mockito = "org.mockito:mockito-core:${depv.mockito}"
+
+
+// -- Predefined dependency sets which can be used by subprojects:
+
+deps.springCoreSet = [
+  deps.jsr250api,
+  deps.aspectjRt,
+  deps.aspectjTools,
+  deps.springAspects,
+  deps.springContext,
+  deps.springOrm
+]
+
+deps.hibernateSet = [
+  deps.hikari,
+  deps.hibernateEntitymanager,
+  deps.hibernateValidator,
+  deps.javaxEl
+]
+
+deps.jacksonSet = [
+  deps.jacksonCore,
+  deps.jacksonDatabind
+]
+
+deps.jettySet = [
+  deps.jettyServer,
+  deps.jettyServlet,
+  deps.jettyWebapp,
+  deps.jettyServlets,
+  deps.jettyAnnotations,
+  deps.asm,
+  deps.asmCommons
+]
+
+deps.slf4jSet = [
+  deps.slf4jApi,
+  deps.slf4jExt,
+  deps.slf4jJulToSlf4j,
+  deps.slf4jJclOverSlf4j,
+  deps.logback,
+]
+
+
+deps.jtwigSet = [
+  deps.jtwigCore,
+  deps.jtwigSpring,
+]
+
+
+// ---- Custom Tasks ----
+
+task cleanAll { t ->
+	group = 'Build'
+	description = 'Clean all projects.'
+	dependsOn { collectTasks(t, [ 'clean' ]) } // FIXME: does not work; the 'clean' tasks are not here yet! :-(
+}
+
+task buildAllProjects { t ->
+//	dependsOn {
+//		def tasks = subprojects.collect { p -> p.tasks.findAll { t -> t.name == 'test' || t.name == 'build' } }.flatten()
+//		println "buildAllProjects.dependsOn: ${tasks}"
+//		return tasks
+//	}
+	dependsOn { collectTasks(t, [ 'test', 'build' ]) } // FIXME: works for 'test' but not for 'build'! :-(
+	mustRunAfter 'cleanAll'
+}
+
+task buildAllProjectsDirty { t ->
+//	dependsOn {
+//		subprojects.collect { p -> p.tasks.findAll { t -> t.name == 'assemble' } }.flatten()
+//	}
+	dependsOn { collectTasks(t, [ 'assemble' ]) } // FIXME: does not work; the 'assemble' tasks are not here yet! :-(
+	mustRunAfter 'cleanAll'
+}
+
+task buildAllDist {
+	dependsOn ':main:distZip'
+	dependsOn ':elasticsearch:distZip'
+	mustRunAfter 'buildAllProjects', 'buildAllProjectsDirty'
+}
+
+task buildAllDirty {
+	group = "Build"
+	description = "Executes a _dirty_ build for the complete project. This is the same as 'buildAll' but without the enforced 'clean' and without executing tests; use it only for testing the build, NOT TO BUILD ACTUAL RELEASED DISTRIBUTIONS!"
+	dependsOn 'buildAllProjectsDirty', 'buildAllDist'
+}
+
+task buildAll {
+	group = 'Build'
+	description = "Executes a clean build for the complete project."
+	dependsOn 'cleanAll', 'buildAllProjects', 'buildAllDist'
+}
+
+task generateTimestamps {
+	group = 'Build'
+	description = 'Produces a dozen timestamps (starting with the current time and counting upwards) which can be used as ids of static entities.'
+
+	doLast {
+		long ts = System.currentTimeMillis()
+		println "Generated Timestamps:"
+		for (int i = 0; i < 12; i++) {
+			println "    ${ts + i}L"
+		}
+	}
+}
+
+task dependencyCheck (type: OwaspDependencyCheckTask) {
+	group = 'Help'
+	description 'Checks Java library dependencies for known security problems using the OWASP dependency check.'
+	
+	gradle.projectsEvaluated {
+		allprojects { p ->
+			// println "PROJECT: ${p} (${p.configurations})"
+			p.configurations.each { c ->
+				// println "    CONFIGURATION: ${c}"
+				c.each { f ->
+					// println "        SOURCE: ${f}"
+					source f
+				}
+			}
+		}
+	}
+}
+
+// ---- Helper Methods ----
+
+ext.collectTasksCache = [:]
+
+private def collectTasks(def parentTask, def names) {
+	def tasks = collectTasksCache[parentTask]
+	if (tasks == null) {
+		tasks = project.subprojects.collect { p -> p.tasks.findAll { t -> names.contains(t.name) } }.flatten()
+		collectTasksCache[parentTask] = tasks
+		// println "${parentTask}.dependsOn: ${tasks}"
+	}
+	return tasks
+}
+
+// ---- Imports ----
+
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Properties;
+
+import io.wallee.buildtools.gradle.tasks.OwaspDependencyCheckTask
