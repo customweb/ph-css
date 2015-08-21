@@ -15,9 +15,10 @@
 
 # Gradle:
 /.gradle/
+/build/
 
 # Eclipse:
 /.settings/
 /.classpath
 /.project
-
+/.eclipse-classes/
