@@ -320,7 +320,7 @@ public abstract class AbstractCSS30TestCase
                                        + "\n"
                                        + "#mitte #mitte_links p a[href~=\"/\"]:link:after,\n"
                                        + "#mitte #mitte_links p a[href~=\"/\"]:visited:after {\n"
-                                       + "  /* hinter Links URL ausgeben (nur Gecko-Engine); wenn URL mit / anfängt, heise.de davor */\n"
+                                       + "  /* hinter Links URL ausgeben (nur Gecko-Engine); wenn URL mit / anf\u00e4ngt, heise.de davor */\n"
                                        + "  content: \" [http://www.heise.de\" attr(href)\"] \";\n"
                                        + "}\n"
                                        + "@font-face {\n"

@@ -72,10 +72,15 @@ compileJavacc {
 	arguments = [ USER_CHAR_STREAM: 'true' ]
 }
 
-// Remove the dependencies added by JavaCC plugin to 'compileJava':
+// Remove the dependencies added by JavaCC plugin to 'compileJava' and 'compileTestJava':
 gradle.projectsEvaluated {
-	def t = tasks['compileJava']
-	// println 'compileJava.dependsOn: ' + t.dependsOn
+	removeJavaCcDependencies('compileJava')
+	removeJavaCcDependencies('compileTestJava')
+}
+
+private void removeJavaCcDependencies(String tn) {
+	def t = tasks[tn]
+	// println "${tn}.dependsOn: ${t.dependsOn}"
 	t.dependsOn = t.dependsOn.findAll { !(it instanceof Task && (it.name == 'compileJjtree' || it.name == 'compileJavacc')) }
 }
 

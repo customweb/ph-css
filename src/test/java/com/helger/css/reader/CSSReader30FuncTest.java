@@ -354,14 +354,14 @@ public final class CSSReader30FuncTest extends AbstractFuncTestCSSReader
     assertEquals (".class{color:red}", new CSSWriter (ECSSVersion.CSS30, true).getCSSAsString (aCSS));
 
     // With Umlauts
-    sCSS = "div { colör: räd; }";
+    sCSS = "div { col\u00f6r: r\u00e4d; }";
     aCSS = CSSReader.readFromStringReader (sCSS, aSettings);
     assertNotNull (aCSS);
-    assertEquals ("div{colör:räd}",
+    assertEquals ("div{col\u00f6r:r\u00e4d}",
                   new CSSWriter (new CSSWriterSettings (ECSSVersion.CSS30).setOptimizedOutput (true)).getCSSAsString (aCSS));
     aCSS2 = CSSReader.readFromStringReader (sCSS, aSettings);
     assertNotNull (aCSS2);
-    assertEquals ("div{colör:räd}", new CSSWriter (ECSSVersion.CSS30, true).getCSSAsString (aCSS2));
+    assertEquals ("div{col\u00f6r:r\u00e4d}", new CSSWriter (ECSSVersion.CSS30, true).getCSSAsString (aCSS2));
     assertEquals (aCSS, aCSS2);
 
     // With masking
