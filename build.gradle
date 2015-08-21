@@ -51,7 +51,7 @@ plugins {
 // ------ Basic Configuration ------
 
 group = 'io.wallee'
-ext.buildVersion = '1.0'
+ext.buildVersion = '4.0.1'
 ext.javaVersion = '1.8'
 defaultTasks 'buildAll'
 
