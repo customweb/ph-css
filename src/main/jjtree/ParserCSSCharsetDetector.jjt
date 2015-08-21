@@ -44,7 +44,7 @@ options {
 }
 
 PARSER_BEGIN(ParserCSSCharsetDetector)
-package com.helger.css.parser;
+package com.helger.css.parser.generated;
 
 public class ParserCSSCharsetDetector
 {

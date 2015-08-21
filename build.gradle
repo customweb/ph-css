@@ -33,6 +33,13 @@ buildscript {
   dependencies {
     classpath 'io.wallee:buildtools:0.3.+'
   }
+  
+  configurations.all {
+    resolutionStrategy {
+	  // enforce the JavaCC version to match the expectations of the project
+      force group: 'net.java.dev.javacc', name: 'javacc', version: '6.1.2'
+    }
+  }
 }
 
 plugins {
@@ -59,6 +66,16 @@ dependencies {
 
 // ---- Custom Tasks ----
 
+task javacc (type: Copy) {
+	group = 'JavaCC'
+	description = "(Re)generates Java code from JavaCC and JJTree sources and puts the generated code into the 'main' sources."
+	dependsOn 'compileJjtree', 'compileJavacc'
+	from tasks['compileJavacc'].outputDirectory
+	from tasks['compileJjtree'].outputDirectory
+	include '*.java'
+	into 'src/main/java/com/helger/css/parser/generated'
+}
+
 task buildAll {
 	group = 'Build'
 	description = "Executes a clean build for the complete project."
@@ -82,6 +99,21 @@ task dependencyCheck (type: OwaspDependencyCheckTask) {
 		}
 	}
 }
+
+// ---- Custom Configuration for JavaCC ----
+
+compileJavacc {
+	arguments = [ USER_CHAR_STREAM: 'true' ]
+}
+
+// Remove the dependencies added by JavaCC plugin to 'compileJava':
+gradle.projectsEvaluated {
+	def t = tasks['compileJava']
+	println 'compileJava.dependsOn: ' + t.dependsOn
+	t.dependsOn = t.dependsOn.findAll { !(it instanceof Task && (it.name == 'compileJjtree' || it.name == 'compileJavacc')) }
+}
+
+
 
 // ---- Imports ----
 
