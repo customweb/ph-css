@@ -1,0 +1,157 @@
+// ====== Gradle Build Script for wallee-applications ======
+
+
+// ------ Plugins ------
+
+buildscript {
+  repositories {
+    // TODO: Solve the chicken-and-egg problem with using the artifactory repo to download
+    // the buildtools and configuring the artifactory repo by applying the buildtools plugins!
+    def f = project.file("${System.getProperty('user.home')}/.gradle/cw-repo-password.properties")
+    def p = f.toPath()
+    assert Files.isReadable(p) : "Customweb repo password file does not exist or is not readable by the current user '${System.getProperty('user.name')}': '${p}'"
+    def perms = PosixFilePermissions.toString(Files.getPosixFilePermissions(p))
+    assert perms.endsWith('------') : "Customweb repo password file '${f}' is accessible by group and/or others (permissions '${perms}'); please make sure that the file is neither readable nor writable nor executable by anyone else than the current user '${System.getProperty('user.name')}'!"
+    def props = new Properties()
+    try {
+      f.withInputStream { props.load(it) }
+    } catch(Exception exc) {
+      throw new IOException("Failed to read Customweb repo password file '${p}': ${exc}", exc)
+    }
+    assert props['user'] != null && !props['user'].isEmpty() : "Missing or empty property 'user' in Customweb repo password file '${f}'."
+    assert props['password'] != null && !props['password'].isEmpty() : "Missing or empty property 'password' in Customweb repo password file '${f}'."
+
+    maven {
+      url 'https://repo.customweb.com/artifactory/repo'
+      credentials {
+        username props['user']
+        password props['password']
+      }
+    }
+  }
+
+  dependencies {
+    classpath 'io.wallee:buildtools:0.3.+'
+  }
+  
+  configurations.all {
+    resolutionStrategy {
+	  // Enforce the JavaCC version to match the expectations of the project:
+      force group: 'net.java.dev.javacc', name: 'javacc', version: '6.1.2'
+    }
+  }
+}
+
+plugins {
+	// JavaCC plugin (see https://github.com/johnmartel/javaccPlugin):
+	id "ca.coglinc.javacc" version "2.3.1"
+}
+
+
+// ------ Basic Configuration ------
+
+group = 'io.wallee'
+ext.buildVersion = '4.0.1'
+ext.javaVersion = '1.8'
+defaultTasks 'buildAll'
+
+apply plugin: 'io.wallee.single-java-project'
+
+
+// ---- Dependencies ----
+
+dependencies {
+    compile "com.helger:ph-commons:6.1.1"
+    
+	testCompile 'junit:junit:4.11'
+    testRuntime "ch.qos.logback:logback-classic:1.1.2"
+}
+
+
+// ---- JavaCC Tasks and Configuration ----
+
+// JavaCC configuration:
+compileJavacc {
+	arguments = [ USER_CHAR_STREAM: 'true' ]
+}
+
+// Remove the dependencies added by JavaCC plugin to 'compileJava' and 'compileTestJava':
+gradle.projectsEvaluated {
+	removeJavaCcDependencies('compileJava')
+	removeJavaCcDependencies('compileTestJava')
+}
+
+private void removeJavaCcDependencies(String tn) {
+	def t = tasks[tn]
+	// println "${tn}.dependsOn: ${t.dependsOn}"
+	t.dependsOn = t.dependsOn.findAll { !(it instanceof Task && (it.name == 'compileJjtree' || it.name == 'compileJavacc')) }
+}
+
+// JavaCC task which compiles JavaCC/JJTree to Java sources and copies these into 'src/main/javacc':
+task javacc (type: Copy) {
+	group = 'JavaCC'
+	description = "(Re)generates Java code from JavaCC and JJTree sources and puts the generated code into the 'main' sources."
+	dependsOn 'compileJjtree', 'compileJavacc', 'javacc_cleanTargetDir'
+	
+	ext.targetDir = file('src/main/javacc')
+	
+	from tasks['compileJavacc'].outputDirectory
+	from tasks['compileJjtree'].outputDirectory
+	include '*.java'
+	into "${targetDir}/com/helger/css/parser"
+}
+
+// Clean generated sources:
+task javacc_cleanTargetDir (type: Delete) {
+	def d = tasks['javacc'].targetDir
+	if (d.isDirectory()) {
+		delete d.listFiles()
+	}
+}
+
+// Add the generated sources to the 'main' source set:
+sourceSets.main.java.srcDir javacc.targetDir
+
+// Disable warnings for generated sources:
+eclipse.classpath.file.withXml { p ->
+	// TODO: This would be worth to be put into the 'buildtools' somehow!
+	p.asNode().children().findAll { it.name() == "classpathentry" && it.@kind == "src" && it.@path == "src/main/javacc" }.each { cpe ->
+		cpe.appendNode('attributes').appendNode('attributes', [ name: 'ignore_optional_problems', value: 'true' ])
+	}
+}
+
+
+// ---- Misc. Custom Tasks ----
+
+task buildAll {
+	group = 'Build'
+	description = "Executes a clean build for the complete project."
+	dependsOn 'clean', 'build'
+}
+
+task dependencyCheck (type: OwaspDependencyCheckTask) {
+	group = 'Help'
+	description 'Checks Java library dependencies for known security problems using the OWASP dependency check.'
+	
+	gradle.projectsEvaluated {
+		allprojects { p ->
+			// println "PROJECT: ${p} (${p.configurations})"
+			p.configurations.each { c ->
+				// println "    CONFIGURATION: ${c}"
+				c.each { f ->
+					// println "        SOURCE: ${f}"
+					source f
+				}
+			}
+		}
+	}
+}
+
+
+// ---- Imports ----
+
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Properties;
+
+import io.wallee.buildtools.gradle.tasks.OwaspDependencyCheckTask

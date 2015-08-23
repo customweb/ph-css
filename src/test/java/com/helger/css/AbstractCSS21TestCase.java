@@ -311,7 +311,7 @@ public abstract class AbstractCSS21TestCase
                                        + "\r\n"
                                        + "#mitte #mitte_links p a[href~=\"/\"]:link:after,\r\n"
                                        + "#mitte #mitte_links p a[href~=\"/\"]:visited:after {\r\n"
-                                       + "  /* hinter Links URL ausgeben (nur Gecko-Engine); wenn URL mit / anfängt, heise.de davor */\r\n"
+                                       + "  /* hinter Links URL ausgeben (nur Gecko-Engine); wenn URL mit / anf\u00e4ngt, heise.de davor */\r\n"
                                        + "  content: \" [http://www.heise.de\" attr(href)\"] \";\r\n"
                                        + "}\r\n";
 }

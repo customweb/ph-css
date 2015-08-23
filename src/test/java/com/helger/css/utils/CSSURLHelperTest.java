@@ -92,9 +92,9 @@ public final class CSSURLHelperTest
 
     final SimpleURL aURL = new SimpleURL ("a.gif", new SMap ("x", "y"));
     assertEquals ("url(a.gif?x=y)", CSSURLHelper.getAsCSSURL (aURL, false));
-    assertEquals ("url('a.gif?x=y')", CSSURLHelper.getAsCSSURL (aURL, true));
-    assertEquals ("url(?)", CSSURLHelper.getAsCSSURL (new SimpleURL (), false));
-    assertEquals ("url('?')", CSSURLHelper.getAsCSSURL (new SimpleURL (), true));
+    assertEquals ("url('a.gif?x=y')", CSSURLHelper.getAsCSSURL (aURL, true)); System.out.println("SimpleURL: " + (new SimpleURL()).getAsString());
+    assertEquals ("url()", CSSURLHelper.getAsCSSURL (new SimpleURL (), false));
+    assertEquals ("url('')", CSSURLHelper.getAsCSSURL (new SimpleURL (), true));
 
     // SimpleURL -> CSS URL -> String -> SimpleURL
     assertEquals (aURL, new SimpleURL (CSSURLHelper.getURLValue (CSSURLHelper.getAsCSSURL (aURL, true))));
