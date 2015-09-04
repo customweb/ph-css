@@ -9,7 +9,7 @@ class SimpleNode implements Node {
   protected Node[] children;
   protected int id;
   protected Object value;
-  protected ParserCSS30 parser;
+  protected ParserCSS21 parser;
   protected Token firstToken;
   protected Token lastToken;
 
@@ -17,7 +17,7 @@ class SimpleNode implements Node {
     id = i;
   }
 
-  public SimpleNode(ParserCSS30 p, int i) {
+  public SimpleNode(ParserCSS21 p, int i) {
     this(i);
     parser = p;
   }
@@ -65,7 +65,7 @@ class SimpleNode implements Node {
      you need to do. */
 
   public String toString() {
-    return ParserCSS30TreeConstants.jjtNodeName[id];
+    return ParserCSS21TreeConstants.jjtNodeName[id];
   }
   public String toString(String prefix) { return prefix + toString(); }
 
@@ -89,4 +89,4 @@ class SimpleNode implements Node {
   }
 }
 
-/* JavaCC - OriginalChecksum=7532d2c4a721c5620edf37632b6ae464 (do not edit this line) */
+/* JavaCC - OriginalChecksum=4c85656a4f8f31bd11539249198853a1 (do not edit this line) */
