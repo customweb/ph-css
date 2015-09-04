@@ -48,6 +48,7 @@ import com.helger.css.decl.CSSMediaQuery;
 import com.helger.css.decl.CSSMediaQuery.EModifier;
 import com.helger.css.decl.CSSMediaRule;
 import com.helger.css.decl.CSSNamespaceRule;
+import com.helger.css.decl.CSSPageMarginBoxRule;
 import com.helger.css.decl.CSSPageRule;
 import com.helger.css.decl.CSSSelector;
 import com.helger.css.decl.CSSSelectorAttribute;
@@ -66,9 +67,11 @@ import com.helger.css.decl.CascadingStyleSheet;
 import com.helger.css.decl.ECSSAttributeOperator;
 import com.helger.css.decl.ECSSExpressionOperator;
 import com.helger.css.decl.ECSSMathOperator;
+import com.helger.css.decl.ECSSPageMarginBoxRuleDeclarations;
 import com.helger.css.decl.ECSSSelectorCombinator;
 import com.helger.css.decl.ECSSSupportsConditionOperator;
 import com.helger.css.decl.ICSSExpressionMember;
+import com.helger.css.decl.ICSSPageMemberRule;
 import com.helger.css.decl.ICSSSelectorMember;
 import com.helger.css.decl.ICSSSupportsConditionMember;
 import com.helger.css.media.ECSSMediaExpressionFeature;
@@ -105,12 +108,29 @@ final class CSSNodeToDomainObject
   private void _expectNodeType (@Nonnull final CSSNode aNode, @Nonnull final ECSSNodeType eExpected)
   {
     if (!eExpected.isNode (aNode, m_eVersion))
-      throw new CSSHandlingException (aNode,
-                                      "Expected a '" +
+      throw new CSSHandlingException (aNode, "Expected a '" +
                                              eExpected.getNodeName (m_eVersion) +
                                              "' node but received a '" +
                                              ECSSNodeType.getNodeName (aNode, m_eVersion) +
                                              "'");
+  }
+
+  private void _expectNodeTypes (@Nonnull final CSSNode aNode, @Nonnull final ECSSNodeType... eExpectedTypes)
+  {
+
+    String sPrefix = "";
+    StringBuilder aSB = new StringBuilder ("Expected one of");
+    for (ECSSNodeType eType : eExpectedTypes)
+    {
+
+      if (eType.isNode (aNode, m_eVersion))
+        return;
+
+      aSB.append (sPrefix + " '" + eType.getNodeName (m_eVersion) + "'");
+      sPrefix = ",".intern ();
+    }
+    aSB.append (" but received a '" + ECSSNodeType.getNodeName (aNode, m_eVersion) + "'");
+    throw new CSSHandlingException (aNode, aSB.toString ());
   }
 
   private static void _throwUnexpectedChildrenCount (@Nonnull final CSSNode aNode, @Nonnull @Nonempty final String sMsg)
@@ -203,8 +223,7 @@ final class CSSNodeToDomainObject
     {
       final int nExpectedChildCount = nOperatorIndex + 2;
       if (nChildren != nExpectedChildCount)
-        _throwUnexpectedChildrenCount (aNode,
-                                       "Illegal number of children present (" +
+        _throwUnexpectedChildrenCount (aNode, "Illegal number of children present (" +
                                               nChildren +
                                               ") - expected " +
                                               nExpectedChildCount);
@@ -528,7 +547,7 @@ final class CSSNodeToDomainObject
   @Nullable
   private CSSDeclaration _createDeclaration (@Nonnull final CSSNode aNode)
   {
-    _expectNodeType (aNode, ECSSNodeType.STYLEDECLARATION);
+    _expectNodeTypes (aNode, ECSSNodeType.STYLEDECLARATION, ECSSNodeType.STYLEPAGERULEDECLARATION);
     final int nChildCount = aNode.jjtGetNumChildren ();
     if (nChildCount < 1 || nChildCount > 3)
       _throwUnexpectedChildrenCount (aNode, "Expected 1-3 children but got " + nChildCount + "!");
@@ -637,15 +656,34 @@ final class CSSNodeToDomainObject
     {
       final CSSNode aChildNode = aNode.jjtGetChild (nIndex);
 
-      if (ECSSNodeType.STYLEDECLARATIONLIST.isNode (aChildNode, m_eVersion))
+      if (ECSSNodeType.STYLEPAGERULEDECLARATIONLIST.isNode (aChildNode, m_eVersion))
       {
         // Read all contained declarations
         final int nDecls = aChildNode.jjtGetNumChildren ();
+
         for (int nDecl = 0; nDecl < nDecls; ++nDecl)
         {
-          final CSSDeclaration aDeclaration = _createDeclaration (aChildNode.jjtGetChild (nDecl));
-          if (aDeclaration != null)
-            ret.addDeclaration (aDeclaration);
+          CSSNode aChildChildNode = aChildNode.jjtGetChild (nDecl);
+          if (aChildChildNode.jjtGetNumChildren () > 0 &&
+              ECSSNodeType.UNKNOWNRULE.isNode (aChildChildNode.jjtGetChild (0), m_eVersion))
+          {
+            CSSNode aChildChildChildNode = aChildChildNode.jjtGetChild (0);
+            CSSUnknownRule aUnkownRule = _createUnknownRule (aChildChildChildNode);
+            if (aUnkownRule instanceof ICSSPageMemberRule)
+            {
+              ret.addPageMemberRule ((ICSSPageMemberRule) aUnkownRule);
+            }
+            else
+            {
+              s_aLogger.error ("Unsupported page-rule child: " + ECSSNodeType.getNodeName (aChildChildChildNode, m_eVersion));
+            }
+          }
+          else
+          {
+            final CSSDeclaration aDeclaration = _createDeclaration (aChildNode.jjtGetChild (nDecl));
+            if (aDeclaration != null)
+              ret.addDeclaration (aDeclaration);
+          }
         }
       }
       else
@@ -934,8 +972,9 @@ final class CSSNodeToDomainObject
     _expectNodeType (aNode, ECSSNodeType.NAMESPACERULE);
     final int nChildCount = aNode.jjtGetNumChildren ();
     if (nChildCount < 1 || nChildCount > 2)
-      _throwUnexpectedChildrenCount (aNode,
-                                     "Expected at least 1 child and at last 2 children but got " + nChildCount + "!");
+      _throwUnexpectedChildrenCount (aNode, "Expected at least 1 child and at last 2 children but got " +
+                                            nChildCount +
+                                            "!");
 
     String sPrefix = null;
     int nURLIndex = 0;
@@ -1085,11 +1124,29 @@ final class CSSNodeToDomainObject
     // Get the name of the rule
     final String sRuleDeclaration = aNode.getText ();
 
-    final CSSUnknownRule ret = new CSSUnknownRule (sRuleDeclaration);
+    final CSSUnknownRule ret = _determinePossibleSubtype (aNode, sRuleDeclaration);
     ret.setSourceLocation (aNode.getSourceLocation ());
     ret.setParameterList (aParameterList.getText ());
     ret.setBody (aBody.getText ());
     return ret;
+  }
+
+  @Nonnull
+  private CSSUnknownRule _determinePossibleSubtype (final CSSNode aNode, final String sRuleDeclaration)
+  {
+    CSSUnknownRule result = null;
+    final CSSNode aParent = (CSSNode) aNode.jjtGetParent ();
+    if (aParent != null) // check for parent to be able to handle sub-rule
+    {
+      if (ECSSNodeType.STYLEPAGERULEDECLARATION.isNode (aParent, m_eVersion)) // check whether it's a sub-rule of a page-rule
+      {
+        if (ECSSPageMarginBoxRuleDeclarations.getValueByDeclarationIgnoreCase (sRuleDeclaration) != null) // check whether it's a margin-box rule
+        {
+          return new CSSPageMarginBoxRule (sRuleDeclaration);
+        }
+      }
+    }
+    return new CSSUnknownRule (sRuleDeclaration);
   }
 
   @Nonnull

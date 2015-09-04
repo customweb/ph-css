@@ -16,6 +16,8 @@
  */
 package com.helger.css.decl;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import javax.annotation.Nonnegative;
@@ -50,6 +52,7 @@ public class CSSPageRule implements ICSSTopLevelRule, IHasCSSDeclarations, ICSSV
 {
   private final String m_sPseudoPage;
   private final CSSDeclarationContainer m_aDeclarations = new CSSDeclarationContainer ();
+  private final List<ICSSPageMemberRule> m_aPageMemberRules = new ArrayList<ICSSPageMemberRule>();
   private CSSSourceLocation m_aSourceLocation;
 
   public CSSPageRule (@Nullable final String sPseudoPage)
@@ -160,7 +163,40 @@ public class CSSPageRule implements ICSSTopLevelRule, IHasCSSDeclarations, ICSSV
   {
     return m_aDeclarations.getAllDeclarationsOfPropertyNameCaseInsensitive (sPropertyName);
   }
-
+  
+  @Nonnull
+  public boolean hasMemberRules(){
+    return !m_aPageMemberRules.isEmpty ();
+  }
+  
+  @Nonnull
+  public int getMemberRuleCount(){
+    return m_aPageMemberRules.size ();
+  }
+  
+  @Nonnull
+  public CSSPageRule addPageMemberRule(ICSSPageMemberRule memberRule){
+    m_aPageMemberRules.add (memberRule);
+    return this;
+  }
+  
+  @Nonnull
+  public <T extends ICSSPageMemberRule> CSSPageRule addAllPageMemberRules(Collection<T> memberRules){
+    m_aPageMemberRules.addAll (memberRules);
+    return this;
+  }
+  
+  
+  @Nonnull
+  @ReturnsMutableCopy
+  public List<ICSSPageMemberRule> getPageMemberRules(){
+    List<ICSSPageMemberRule> copy = new ArrayList<ICSSPageMemberRule>();
+    for(ICSSPageMemberRule memRule : m_aPageMemberRules){
+      copy.add (memRule.getClone ());
+    }
+    return copy;
+  }
+  
   @Nonnull
   @Nonempty
   public String getAsCSSString (@Nonnull final ICSSWriterSettings aSettings, @Nonnegative final int nIndentLevel)
@@ -180,11 +216,24 @@ public class CSSPageRule implements ICSSTopLevelRule, IHasCSSDeclarations, ICSSV
 
     if (StringHelper.hasText (m_sPseudoPage))
       aSB.append (' ').append (m_sPseudoPage);
-
-    aSB.append (m_aDeclarations.getAsCSSString (aSettings, nIndentLevel));
+    
+    aSB.append ("{");
+    if(!bOptimizedOutput)
+      aSB.append ("\n");
+    aSB.append (m_aDeclarations.getAsCSSString (aSettings, nIndentLevel, false));
+    
+    String sPrefix = "";
+    for(ICSSPageMemberRule memRule : m_aPageMemberRules){
+      aSB.append (sPrefix + memRule.getAsCSSString (aSettings, nIndentLevel));
+      if (!bOptimizedOutput){
+        sPrefix = "\n".intern();
+      }
+    }
+    
+    aSB.append ("}");
     if (!bOptimizedOutput)
       aSB.append ('\n');
-
+    
     return aSB.toString ();
   }
 

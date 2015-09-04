@@ -36,32 +36,34 @@ public interface ParserCSS30TreeConstants
   public int JJTPROPERTY = 30;
   public int JJTIMPORTANT = 31;
   public int JJTSTYLEDECLARATION = 32;
-  public int JJTSTYLEDECLARATIONLIST = 33;
-  public int JJTSTYLERULE = 34;
-  public int JJTMEDIAMODIFIER = 35;
-  public int JJTMEDIUM = 36;
-  public int JJTMEDIAFEATURE = 37;
-  public int JJTMEDIAEXPR = 38;
-  public int JJTMEDIAQUERY = 39;
-  public int JJTMEDIALIST = 40;
-  public int JJTMEDIARULE = 41;
-  public int JJTPSEUDOPAGE = 42;
-  public int JJTPAGERULE = 43;
-  public int JJTFONTFACERULE = 44;
-  public int JJTKEYFRAMESIDENTIFIER = 45;
-  public int JJTSINGLEKEYFRAMESELECTOR = 46;
-  public int JJTKEYFRAMESSELECTOR = 47;
-  public int JJTKEYFRAMESRULE = 48;
-  public int JJTVIEWPORTRULE = 49;
-  public int JJTSUPPORTSCONDITIONINPARENS = 50;
-  public int JJTSUPPORTSNEGATION = 51;
-  public int JJTSUPPORTSCONDITIONOPERATOR = 52;
-  public int JJTSUPPORTSCONDITION = 53;
-  public int JJTSUPPORTSRULE = 54;
-  public int JJTUNKNOWNRULEPARAMETERLIST = 55;
-  public int JJTUNKNOWNRULEBODY = 56;
-  public int JJTUNKNOWNRULE = 57;
-  public int JJTINVALID = 58;
+  public int JJTSTYLEPAGERULEDECLARATION = 33;
+  public int JJTSTYLEDECLARATIONLIST = 34;
+  public int JJTSTYLEPAGERULEDECLARATIONLIST = 35;
+  public int JJTSTYLERULE = 36;
+  public int JJTMEDIAMODIFIER = 37;
+  public int JJTMEDIUM = 38;
+  public int JJTMEDIAFEATURE = 39;
+  public int JJTMEDIAEXPR = 40;
+  public int JJTMEDIAQUERY = 41;
+  public int JJTMEDIALIST = 42;
+  public int JJTMEDIARULE = 43;
+  public int JJTPSEUDOPAGE = 44;
+  public int JJTPAGERULE = 45;
+  public int JJTFONTFACERULE = 46;
+  public int JJTKEYFRAMESIDENTIFIER = 47;
+  public int JJTSINGLEKEYFRAMESELECTOR = 48;
+  public int JJTKEYFRAMESSELECTOR = 49;
+  public int JJTKEYFRAMESRULE = 50;
+  public int JJTVIEWPORTRULE = 51;
+  public int JJTSUPPORTSCONDITIONINPARENS = 52;
+  public int JJTSUPPORTSNEGATION = 53;
+  public int JJTSUPPORTSCONDITIONOPERATOR = 54;
+  public int JJTSUPPORTSCONDITION = 55;
+  public int JJTSUPPORTSRULE = 56;
+  public int JJTUNKNOWNRULEPARAMETERLIST = 57;
+  public int JJTUNKNOWNRULEBODY = 58;
+  public int JJTUNKNOWNRULE = 59;
+  public int JJTINVALID = 60;
 
 
   public String[] jjtNodeName = {
@@ -98,7 +100,9 @@ public interface ParserCSS30TreeConstants
     "property",
     "important",
     "styleDeclaration",
+    "stylePageRuleDeclaration",
     "styleDeclarationList",
+    "stylePageRuleDeclarationList",
     "styleRule",
     "mediaModifier",
     "medium",
@@ -126,4 +130,4 @@ public interface ParserCSS30TreeConstants
     "invalid",
   };
 }
-/* JavaCC - OriginalChecksum=2794b6fe4156e5330cc57034ecebbfbb (do not edit this line) */
+/* JavaCC - OriginalChecksum=9e6803a25b839e2e21835627a8b82662 (do not edit this line) */
