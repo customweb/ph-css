@@ -16,12 +16,14 @@
  */
 package com.helger.css.parser;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -81,7 +83,6 @@ public final class ParserCSS30Test extends AbstractCSS30TestCase
     CSSReader.setDefaultParseErrorHandler (new LoggingCSSParseErrorHandler ());
     
     File aFile = new File ("src/test/resources/testfiles/css30/good/pagemembers.css");
-    final String sKey = aFile.getAbsolutePath ();
     final CascadingStyleSheet aCSS = CSSReader.readFromFile (aFile, CCharset.CHARSET_UTF_8_OBJ, ECSSVersion.CSS30);
     assertNotNull (aCSS);
 
@@ -93,10 +94,13 @@ public final class ParserCSS30Test extends AbstractCSS30TestCase
     BufferedReader myInput = new BufferedReader(new InputStreamReader(fin));
     StringBuilder sb = new StringBuilder();
     String line;
+
+    
     while ((line = myInput.readLine()) != null) {  
                sb.append(line + "\n");
     }
+    myInput.close();
     
-    assertTrue(output.equals (sb.toString ()));
+    assertEquals(output, sb.toString ());
   }
 }
