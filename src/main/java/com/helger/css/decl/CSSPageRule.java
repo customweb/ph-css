@@ -217,8 +217,9 @@ public class CSSPageRule implements ICSSTopLevelRule, IHasCSSDeclarations, ICSSV
     if (StringHelper.hasText (m_sPseudoPage))
       aSB.append (' ').append (m_sPseudoPage);
     
-    aSB.append ("{");
-    if(!bOptimizedOutput)
+    final int nDeclCount = m_aDeclarations.getDeclarationCount();
+    aSB.append (" {" + (nDeclCount == 1 ? " " : ""));
+    if(nDeclCount > 1)
       aSB.append ("\n");
     aSB.append (m_aDeclarations.getAsCSSString (aSettings, nIndentLevel, false));
     
@@ -230,7 +231,12 @@ public class CSSPageRule implements ICSSTopLevelRule, IHasCSSDeclarations, ICSSV
       }
     }
     
-    aSB.append ("}");
+    String tmpSpace = "";
+    if(nDeclCount > 1)
+    	tmpSpace = aSettings.getIndent(nIndentLevel);
+    else if(nDeclCount == 1)
+    	tmpSpace = " ";
+    aSB.append (tmpSpace + "}");
     if (!bOptimizedOutput)
       aSB.append ('\n');
     
