@@ -37,6 +37,7 @@ import com.helger.css.decl.CascadingStyleSheet;
 import com.helger.css.decl.ICSSTopLevelRule;
 import com.helger.css.handler.CSSHandler;
 import com.helger.css.reader.CSSReader;
+import com.helger.css.reader.errorhandler.ICSSParseErrorHandler;
 import com.helger.css.reader.errorhandler.LoggingCSSParseErrorHandler;
 import com.helger.css.writer.CSSWriter;
 import com.helger.css.writer.CSSWriterSettings;
@@ -79,7 +80,8 @@ public final class ParserCSS30Test extends AbstractCSS30TestCase
   @Test
   public void testPageMemberRules () throws ParseException, IOException
   {
-
+	  
+	ICSSParseErrorHandler origHandler = CSSReader.getDefaultParseErrorHandler();
     CSSReader.setDefaultParseErrorHandler (new LoggingCSSParseErrorHandler ());
     
     File aFile = new File ("src/test/resources/testfiles/css30/good/pagemembers.css");
@@ -102,5 +104,8 @@ public final class ParserCSS30Test extends AbstractCSS30TestCase
     myInput.close();
     
     assertEquals(output, sb.toString ());
+    
+    CSSReader.setDefaultParseErrorHandler(origHandler);
+    
   }
 }
